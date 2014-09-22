@@ -1,0 +1,111 @@
+#!/usr/bin/env /usr/bin/python
+
+# Copyright (C) 2014 Josh Willis
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 3 of the License, or (at your
+# option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
+# Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
+import multibench, argparse, os, signal, sys
+
+parser = argparse.ArgumentParser(description = "Benchmark a single problem, with possible 'busy work',"
+                                 " on specified CPU affinities or GPU devices")
+
+# Add the options appropriate for benchmarking a single problem
+multibench.insert_option_group(parser)
+
+# Sadly, it seems that our version of Python does not properly support
+# argparse.REMAINDER, which is the correct way to do things.  So we *must*
+# call this function using the bench arguments first, and then give all other
+# arguments (that will be passed on to the dummy and timing scripts)
+
+opt, remainder = parser.parse_known_args()
+multibench.from_cli(opt)
+
+# We expressly pass our environment, which may or may not get updated
+# depending on whether or not we use CPUs or GPUs
+subenv = {}
+subenv.update(os.environ)
+
+# Now figure out whether we are driving many gpus for our 'dummies', or
+# many different CPU cores:
+
+use_gpus = multibench.use_gpus(opt)
+
+if use_gpus:
+    dev_list = opt.bench_gpu_list
+else:
+    nthreads = multibench.parse_cpu_affinity_list(opt.bench_cpu_affinity_list)
+    subenv.update({opt.bench_nthreads_env_name : str(nthreads)})
+    dev_list = opt.bench_cpu_affinity_list
+
+dummy_pids = []
+
+# We will need to start some dummy jobs
+for device in dev_list[1:]:
+    arg_list = multibench.affinity_cmd[:]
+
+    if use_gpus:
+        # If we're just timing on GPUs, then we always use the first
+        # (and only) *CPU* affinity
+        arg_list += [opt.bench_cpu_affinity_list[0]]
+    else:
+        # Otherwise, here is where (in the CPU case) we expressly
+        # assign compute resources for the dummy jobs.
+        arg_list += [device]
+
+    arg_list += multibench.mem_cmd
+    arg_list += [opt.bench_dummy_program]
+    arg_list += remainder
+    if use_gpus:
+        # We assume the pycbc-style of specifiying a GPU device ID; otherwise, wrap
+        # the real program to intercept that. Note that here is where (in the GPU
+        # timing case) we expressly assign compute resources for the dummy jobs.
+        arg_list += ['--processing-device-id', str(device)]
+
+    # We call the subprocess that bench imported, since it prefers subprocess32
+    # when available
+    pid = multibench.subprocess.Popen(arg_list, env=subenv).pid
+    dummy_pids.append(pid)
+
+    # Sleep after starting each job
+    multibench.time.sleep(opt.bench_wait_time)
+
+# Whether or not we started dummy jobs, it's now time to start our real job
+arg_list = multibench.affinity_cmd[:]
+
+# Note that the following is always correct: it's the only thing we do in the
+# GPU case, and it's where we assign the resources for the timing job itself
+# in the CPU case.
+arg_list += [opt.bench_cpu_affinity_list[0]]
+
+arg_list += multibench.mem_cmd
+arg_list += [opt.bench_timing_program]
+arg_list += remainder
+
+# In the GPU timing case, here's where we assign the compute resources for the
+# actual timing job:
+if use_gpus:
+    # We assume the pycbc-style of specifiying a GPU device ID; otherwise, wrap
+    # the real program to intercept that
+    arg_list += ['--processing-device-id',str(opt.bench_gpu_list[0])]
+
+# Call the main program, and let it run to completion
+multibench.subprocess.call(arg_list, env=subenv)
+
+# Cleanup, if we had any dummy jobs:
+for pid in dummy_pids:
+    os.kill(pid,signal.SIGTERM)
+
+# Exit cleanly
+sys.exit(0)

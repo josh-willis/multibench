@@ -1,0 +1,140 @@
+#!/usr/bin/python
+
+# Copyright (C) 2014 Josh Willis
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 3 of the License, or (at your
+# option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
+# Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
+import multibench, argparse, os, signal, sys
+
+parser = argparse.ArgumentParser(description = "Benchmark a single problem, with possible 'busy work',"
+                                 " on specified CPU affinities or GPU devices")
+
+# Add the options appropriate for benchmarking a single problem
+multibench.insert_option_group(parser)
+
+# Sadly, it seems that our version of Python does not properly support
+# argparse.REMAINDER, which is the correct way to do things.  So we *must*
+# call this function using the bench arguments first, and then give all other
+# arguments (that will be passed on to the dummy and timing scripts)
+
+opt, remainder = parser.parse_known_args()
+
+# Now figure out whether we are driving many gpus for our 'dummies', or
+# many different CPU cores:
+
+use_gpus = multibench.use_gpus(opt)
+
+# Even if we are 
+njobs, nthreads = multibench.parse_cpu_affinity_list(opt.bench_cpu_affinity_list)
+
+if use_gpus:
+    # If we are using GPUs, then the njobs returned by the above call will be one,
+    # but we should really be using the number of (possibly repeated) GPUS.
+    njobs = len(opt.bench_gpu_list)
+    if njobs >1 :
+        # We will need to start some dummy jobs
+        dummy_pids = []
+        # Note that we reserve the first affinity for our real benchmark
+        for dev_id in opt.bench_gpu_list[1:]:
+            arg_list = multibench.affinity_cmd[:]
+            arg_list += [opt.bench_cpu_affinity_list[0]]
+            arg_list += multibench.mem_cmd
+            arg_list += [opt.bench_dummy_program]
+            arg_list += remainder
+            # We assume the pycbc-style of specifiying a GPU device ID; otherwise, wrap
+            # the real program to intercept that
+            arg_list += ['--processing-device-id',str(dev_id)]
+            # We call the subprocess that bench imported, since it prefers subprocess32
+            # when available
+            pid = multibench.subprocess.Popen(arg_list).pid
+            dummy_pids.append(pid)
+            # Sleep after starting each job
+            multibench.time.sleep(opt.bench_wait_time)
+
+    # Whether or not we started dummy jobs, it's now time to start our real job
+    arg_list = multibench.affinity_cmd[:]
+    arg_list += [opt.bench_cpu_affinity_list[0]]
+    arg_list += multibench.mem_cmd
+    arg_list += [opt.bench_timing_program]
+    arg_list += remainder
+
+    # We assume the pycbc-style of specifiying a GPU device ID; otherwise, wrap
+    # the real program to intercept that
+    arg_list += ['--processing-device-id',str(opt.bench_gpu_list[0])]
+
+    # Call the main program, and let it run to completion
+    multibench.subprocess.call(arg_list)
+
+    # Cleanup, if we had any dummy jobs:
+    if njobs > 1:
+        for pid in dummy_pids:
+            os.kill(pid,signal.SIGTERM)
+
+    # Exit cleanly
+    sys.exit(0)
+
+else:
+    # We are in fact driving many different CPU jobs, with varying affinities
+    njobs, nthreads = multibench.parse_cpu_affinity_list(opt.bench_cpu_affinity_list)
+    if njobs > 1:
+        # We will need to start some dummy jobs
+        dummy_pids = []
+        # Note that we reserve the first affinity for our real benchmark
+        for affinity in opt.bench_cpu_affinity_list[1:]:
+            arg_list = multibench.affinity_cmd[:]
+            arg_list += [affinity]
+            arg_list += multibench.mem_cmd
+            arg_list += [opt.bench_dummy_program]
+            arg_list += remainder
+            # We assume the program gets its number of threads through
+            # an environment variable, which was given to use in the
+            # option '--bench-nthreads-env-name'.  If the program needs
+            # an option to tell it to look to its environment, that should
+            # have already been provided.
+            subenv = {}
+            subenv.update(os.environ)
+            subenv.update({opt.bench_nthreads_env_name : str(nthreads)})
+            # We call the subprocess that bench imported, since it prefers subprocess32
+            # when available
+            pid = multibench.subprocess.Popen(arg_list,env=subenv).pid
+            dummy_pids.append(pid)
+            # Sleep after starting each job
+            multibench.time.sleep(opt.bench_wait_time)
+
+    # Whether or not we started dummy jobs, it's now time to start our real job
+    arg_list = multibench.affinity_cmd[:]
+    arg_list += [opt.bench_cpu_affinity_list[0]]
+    arg_list += multibench.mem_cmd
+    arg_list += [opt.bench_timing_program]
+    arg_list += remainder
+    # We assume the program gets its number of threads through
+    # an environment variable, which was given to use in the
+    # option '--bench-nthreads-env-name'.  If the program needs
+    # an option to tell it to look to its environment, that should
+    # have already been provided.
+    subenv = {}
+    subenv.update(os.environ)
+    subenv.update({opt.bench_nthreads_env_name : str(nthreads)})
+
+    # Call the main program, and let it run to completion
+    multibench.subprocess.call(arg_list,env=subenv)
+
+    # Cleanup, if we had any dummy jobs:
+    if njobs > 1:
+        for pid in dummy_pids:
+            os.kill(pid,signal.SIGTERM)
+
+    # Exit cleanly
+    sys.exit(0)
