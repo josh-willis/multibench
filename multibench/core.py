@@ -262,8 +262,8 @@ def parse_cpu_affinity_list(cpu_affinity_list):
     return nthreads
 
 def use_gpus(opt):
-    if len(opt.bench_gpu_list) > 0:
-        if len(opt.bench_cpu_affinity_list) != 1:
+    if len(opt.mbench_gpu_list) > 0:
+        if len(opt.mbench_cpu_affinity_list) != 1:
             raise ValueError("When giving non-empty GPU list CPU affinity list must have length one")
         else:
             return True
