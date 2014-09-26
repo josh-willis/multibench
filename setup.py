@@ -64,6 +64,7 @@ setup (
         'multibench'
         ],
     scripts = [
-        'bin/single_problem_bench'
+        'bin/single_problem_bench',
+        'bin/many_problem_bench'
         ]
     )
