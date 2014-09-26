@@ -45,11 +45,11 @@ subenv.update(os.environ)
 use_gpus = multibench.use_gpus(opt)
 
 if use_gpus:
-    dev_list = opt.bench_gpu_list
+    dev_list = opt.mbench_gpu_list
 else:
-    nthreads = multibench.parse_cpu_affinity_list(opt.bench_cpu_affinity_list)
-    subenv.update({opt.bench_nthreads_env_name : str(nthreads)})
-    dev_list = opt.bench_cpu_affinity_list
+    nthreads = multibench.parse_cpu_affinity_list(opt.mbench_cpu_affinity_list)
+    subenv.update({opt.mbench_nthreads_env_name : str(nthreads)})
+    dev_list = opt.mbench_cpu_affinity_list
 
 dummy_pids = []
 
@@ -63,14 +63,14 @@ with open(opt.mbench_input_file, 'r') as problems:
                 if use_gpus:
                     # If we're just timing on GPUs, then we always use the first
                     # (and only) *CPU* affinity
-                    arg_list += [opt.bench_cpu_affinity_list[0]]
+                    arg_list += [opt.mbench_cpu_affinity_list[0]]
                 else:
                     # Otherwise, here is where (in the CPU case) we expressly
                     # assign compute resources for the dummy jobs.
                     arg_list += [device]
 
                 arg_list += multibench.mem_cmd
-                arg_list += [opt.bench_dummy_program]
+                arg_list += [opt.mbench_dummy_program]
                 # Now add the particular problem we're working on:
                 arg_list += [multibench.problem_string, str(problem)]
 
@@ -87,7 +87,7 @@ with open(opt.mbench_input_file, 'r') as problems:
                 dummy_pids.append(pid)
 
                 # Sleep after starting each job
-                multibench.time.sleep(opt.bench_wait_time)
+                multibench.time.sleep(opt.mbench_wait_time)
 
             # Whether or not we started dummy jobs, it's now time to start our real job
             arg_list = multibench.affinity_cmd[:]
@@ -95,10 +95,10 @@ with open(opt.mbench_input_file, 'r') as problems:
             # Note that the following is always correct: it's the only thing we do in the
             # GPU case, and it's where we assign the resources for the timing job itself
             # in the CPU case.
-            arg_list += [opt.bench_cpu_affinity_list[0]]
+            arg_list += [opt.mbench_cpu_affinity_list[0]]
 
             arg_list += multibench.mem_cmd
-            arg_list += [opt.bench_timing_program]
+            arg_list += [opt.mbench_timing_program]
 
             # Now add the particular problem we're working on:
             arg_list += [multibench.problem_string, str(problem)]
@@ -110,7 +110,7 @@ with open(opt.mbench_input_file, 'r') as problems:
             if use_gpus:
                 # We assume the pycbc-style of specifiying a GPU device ID; otherwise, wrap
                 # the real program to intercept that
-                arg_list += ['--processing-device-id',str(opt.bench_gpu_list[0])]
+                arg_list += ['--processing-device-id',str(opt.mbench_gpu_list[0])]
 
             # Call the main program, and let it run to completion
             # Note that here is where we redirect the output, so each problem should
