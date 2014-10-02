@@ -57,12 +57,10 @@ dummy_pids = []
 with open(opt.mbench_input_file, 'r') as inputfile:
     with open(opt.mbench_output_file, 'w') as outfile:
         for line in inputfile:
-            input_args = line.split()
             # Skip white-space only lines and lines starting with '#'
+            input_args = line.partition('#')[0].split()
             if len(input_args) == 0:
-                break
-            if input_args[0][0] == '#':
-                break
+                continue
             # Parse and sanity check the input file
             if len(input_args) != len (multibench.input_arguments):
                 raise ValueError("Input line has wrong number of arguments")
