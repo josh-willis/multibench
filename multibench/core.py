@@ -94,6 +94,13 @@ def set_affinity_cmd(command, bindmem=None):
 
 set_affinity_cmd(command='numactl', bindmem=None)
 
+# Functions to get the global values
+
+def get_affinity_cmd():
+    return affinity_cmd
+
+def get_mem_cmd():
+    return mem_cmd
 
 # Now define the functions our module uses to parse its own command line
 # options.  Note that a big responsibility of this module will be correctly
@@ -228,6 +235,9 @@ def set_input_arguments(arglist):
         input_arguments.append(fullarg)
 
 set_input_arguments(["problem"])
+
+def get_input_arguments():
+    return input_arguments
 
 def io_from_cli(opt):
     """

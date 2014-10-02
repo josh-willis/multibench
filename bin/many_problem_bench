@@ -54,19 +54,21 @@ else:
 
 dummy_pids = []
 
+input_args = multibench.get_input_arguments()
+
 with open(opt.mbench_input_file, 'r') as inputfile:
     with open(opt.mbench_output_file, 'w') as outfile:
         for line in inputfile:
             # Skip white-space only lines and lines starting with '#'
-            input_args = line.partition('#')[0].split()
+            input_vals = line.partition('#')[0].split()
             if len(input_args) == 0:
                 continue
             # Parse and sanity check the input file
-            if len(input_args) != len (multibench.input_arguments):
+            if len(input_vals) != len (input_args):
                 raise ValueError("Input line has wrong number of arguments")
             # We will need to start some dummy jobs
             for device in dev_list[1:]:
-                arg_list = multibench.affinity_cmd[:]
+                arg_list = multibench.get_affinity_cmd()[:]
 
                 if use_gpus:
                     # If we're just timing on GPUs, then we always use the first
@@ -77,10 +79,10 @@ with open(opt.mbench_input_file, 'r') as inputfile:
                     # assign compute resources for the dummy jobs.
                     arg_list += [device]
 
-                arg_list += multibench.mem_cmd
+                arg_list += multibench.get_mem_cmd()
                 arg_list += [opt.mbench_dummy_program]
                 # Now add what we read from the input file
-                for (arg, value) in izip(multibench.input_arguments, input_args):
+                for (arg, value) in izip(input_args, input_vals):
                     arg_list += [arg, value]
 
                 arg_list += remainder
@@ -99,18 +101,18 @@ with open(opt.mbench_input_file, 'r') as inputfile:
                 multibench.time.sleep(opt.mbench_wait_time)
 
             # Whether or not we started dummy jobs, it's now time to start our real job
-            arg_list = multibench.affinity_cmd[:]
+            arg_list = multibench.get_affinity_cmd()[:]
 
             # Note that the following is always correct: it's the only thing we do in the
             # GPU case, and it's where we assign the resources for the timing job itself
             # in the CPU case.
             arg_list += [opt.mbench_cpu_affinity_list[0]]
 
-            arg_list += multibench.mem_cmd
+            arg_list += multibench.get_mem_cmd()
             arg_list += [opt.mbench_timing_program]
 
             # Now add what we read from the input file
-            for (arg, value) in izip(multibench.input_arguments, input_args):
+            for (arg, value) in izip(input_args, input_vals):
                 arg_list += [arg, value]
 
             arg_list += remainder

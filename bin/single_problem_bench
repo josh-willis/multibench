@@ -53,7 +53,7 @@ dummy_pids = []
 
 # We will need to start some dummy jobs
 for device in dev_list[1:]:
-    arg_list = multibench.affinity_cmd[:]
+    arg_list = multibench.get_affinity_cmd()[:]
 
     if use_gpus:
         # If we're just timing on GPUs, then we always use the first
@@ -64,7 +64,7 @@ for device in dev_list[1:]:
         # assign compute resources for the dummy jobs.
         arg_list += [device]
 
-    arg_list += multibench.mem_cmd
+    arg_list += multibench.get_mem_cmd()
     arg_list += [opt.mbench_dummy_program]
     arg_list += remainder
     if use_gpus:
@@ -82,14 +82,14 @@ for device in dev_list[1:]:
     multibench.time.sleep(opt.mbench_wait_time)
 
 # Whether or not we started dummy jobs, it's now time to start our real job
-arg_list = multibench.affinity_cmd[:]
+arg_list = multibench.get_affinity_cmd()[:]
 
 # Note that the following is always correct: it's the only thing we do in the
 # GPU case, and it's where we assign the resources for the timing job itself
 # in the CPU case.
 arg_list += [opt.mbench_cpu_affinity_list[0]]
 
-arg_list += multibench.mem_cmd
+arg_list += multibench.get_mem_cmd()
 arg_list += [opt.mbench_timing_program]
 arg_list += remainder
 
