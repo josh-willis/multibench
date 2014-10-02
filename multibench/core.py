@@ -203,12 +203,14 @@ def insert_io_option_group(parser):
                                 " program, appending each problem's output to that file.",
                                 default=None)
 
-    bench_io_group.add_argument("--mbench-problem-argstring",
-                                help="The string used to specify a particular problem to"
-                                " both the dummy and timing scripts.  The leading double"
-                                " dash should be omitted.", default="problem")
+    bench_io_group.add_argument("--mbench-input-arguments",
+                                help="Space separated list of strings giving (in order) the arguments"
+                                " that will be given on each line of the input file. The length"
+                                " of this list must match the number of whitespace-separated"
+                                " entries in each line of the input file. The leading double"
+                                " dash should be omitted.", default=["problem"], nargs='*')
 
-def set_problem_string(probstring):
+def set_input_arguments(arglist):
     """
     This function sets the global variable 'problem_string' to be the argument (including
     leading double dashes) that should be passed to both dummy and timing programs
@@ -218,20 +220,23 @@ def set_problem_string(probstring):
     be added when this function is called.
     """
 
-    global problem_string
-    problem_string = "--"
-    problem_string += probstring
+    global input_arguments
+    input_arguments = []
+    for arg in arglist:
+        fullarg = "--"
+        fullarg += arg
+        input_arguments.append(fullarg)
 
-set_problem_string("problem")
+set_input_arguments(["problem"])
 
 def io_from_cli(opt):
     """
     This function acts on the command line arguments for the I/O option group.
 
-    At present, that means setting the global variable 'problem_string'
+    At present, that means setting the global variable 'input_arguments'
     """
 
-    set_problem_string(opt.mbench_problem_argstring)
+    set_input_arguments(opt.mbench_input_arguments)
 
 def insert_timing_option_group(parser):
     """
