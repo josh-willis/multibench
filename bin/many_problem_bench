@@ -61,7 +61,7 @@ with open(opt.mbench_input_file, 'r') as inputfile:
         for line in inputfile:
             # Skip white-space only lines and lines starting with '#'
             input_vals = line.partition('#')[0].split()
-            if len(input_args) == 0:
+            if len(input_vals) == 0:
                 continue
             # Parse and sanity check the input file
             if len(input_vals) != len (input_args):
