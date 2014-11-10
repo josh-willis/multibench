@@ -98,7 +98,10 @@ def set_affinity_cmd(command, bindmem=None):
 
 # Set the defaults
 
-set_affinity_cmd(command='numactl', bindmem=None)
+if HAVE_NUMACTL:
+    set_affinity_cmd(command='numactl', bindmem=None)
+else:
+    set_affinity_cmd(command='taskset', bindmem=False)
 
 # Functions to get the global values
 
