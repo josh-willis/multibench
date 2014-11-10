@@ -34,14 +34,20 @@ import argparse as _ap
 with open(_os.devnull,"r+") as _dev_null:
     # We prefer to use numactl if we can, as we can also
     # bind the memory
-    if subprocess.call(['numactl','--hardware'],stdout=_dev_null,stderr=_dev_null) == 0:
-        HAVE_NUMACTL = True
-    else:
+    try:
+        if subprocess.call(['numactl','--hardware'],stdout=_dev_null,stderr=_dev_null) == 0:
+            HAVE_NUMACTL = True
+        else:
+            HAVE_NUMACTL = False
+    except:
         HAVE_NUMACTL = False
 
-    if subprocess.call(['taskset','-V'],stdout=_dev_null,stderr=_dev_null) == 0:
-        HAVE_TASKSET = True
-    else:
+    try:
+        if subprocess.call(['taskset','-V'],stdout=_dev_null,stderr=_dev_null) == 0:
+            HAVE_TASKSET = True
+        else:
+            HAVE_TASKSET = False
+    except:
         HAVE_TASKSET = False
 
     if (not HAVE_NUMACTL) and (not HAVE_TASKSET):
