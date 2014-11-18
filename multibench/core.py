@@ -129,19 +129,19 @@ def insert_option_group(parser):
                                             " This option group also specifies the"
                                             " executable to use as the dummy and"
                                             " timing programs.")
-    bench_group.add_argument("--mbench-cpu-affinity-list", 
+    bench_group.add_argument("--mbench-cpu-affinity-list",
                              help="Space separated list of cpu affinities. The"
                              " length of the list is the number of jobs to run,"
                              " and the number of cpus in each list-item is the number"
                              " of threads to assign to each job. Each list-item must"
-                             " itself be a comma-separated list of cpu IDs", 
+                             " itself be a comma-separated list of cpu IDs",
                              nargs='*', default=[])
 
     bench_group.add_argument("--mbench-gpu-list",
                              help="Space separated list of gpu devices",
                              nargs='*', default=[])
 
-    bench_group.add_argument("--mbench-dummy-program", 
+    bench_group.add_argument("--mbench-dummy-program",
                              help="The program to execute to fill up  unoccupied cores"
                              " on the CPU socket.  It should never terminate on its"
                              " own, and should require minimal setup time. It is an"
@@ -174,7 +174,7 @@ def insert_option_group(parser):
 
     bench_group.add_argument("--mbench-affinity-cmd",
                              help="The command to use to set the CPU affinity of jobs",
-                             choices=['numactl', 'taskset'], default='numactl')
+                             choices=['numactl', 'taskset'], default=None)
 
     # For the following function, because we do not want simply on/off behavior,
     # we can't specify the type and also can't use 'store_true'
@@ -194,11 +194,12 @@ def from_cli(opt):
     """
     bind_mem_dict = { 'None' : None, 'True' : True, 'False' : False}
 
-    set_affinity_cmd(command=opt.mbench_affinity_cmd,
-                     bindmem=bind_mem_dict[opt.mbench_bind_mem])
-    
+    if opt.mbench_affinity_cmd is not None:
+        set_affinity_cmd(command=opt.mbench_affinity_cmd,
+                         bindmem=bind_mem_dict[opt.mbench_bind_mem])
 
-                             
+
+
 def insert_io_option_group(parser):
     """
     This function is called by programs wishing to read each problem successively
@@ -302,7 +303,7 @@ def format_time_strings(times):
     """
     base_time = times[0] # We choose our units based on this
     retlist = []
-    
+
     if (base_time >= 1.0):
         tstr = " s"
         fact = 1.0
@@ -316,7 +317,7 @@ def format_time_strings(times):
         # Yeah, like we ever get here:
         tstr = " ns"
         fact = 1.0e9
-        
+
     for t in times:
         tcopy = t
         retlist.append("{0:g} {1}".format(tcopy*fact,tstr))
@@ -327,7 +328,7 @@ class MultiBenchProblem(object):
     """
     This provides a base class from which specific problems to be benchmarked
     should be derived. Those classes will need to define a nontrivial
-    constructor and a method 'execute' that takes no arguments. Any 
+    constructor and a method 'execute' that takes no arguments. Any
     setup that should be done after the constructor and should be timed
     should be done in a method named '_setup()' that again takes no
     arguments.  This base class will then provide a method 'setup()'
