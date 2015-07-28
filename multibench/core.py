@@ -366,8 +366,8 @@ class MultiBenchProblem(object):
 
         tmp_Timer = Timer(self.execute)
 
-        for i in range(1,10):
-            n = 10**i
+        for i in range(1,21):
+            n = 3**i
             x = tmp_Timer.timeit(number=n)
             if x > secs:
                 break
