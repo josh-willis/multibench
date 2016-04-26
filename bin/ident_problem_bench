@@ -19,8 +19,8 @@
 import multibench, argparse, os, signal, sys
 from itertools import izip
 
-parser = argparse.ArgumentParser(description = "Benchmark a set of problems, with possible 'busy work',"
-                                 " on specified CPU affinities or GPU devices")
+parser = argparse.ArgumentParser(description = "Benchmark many identical jobs, started at the same time"
+                                 " with specified CPU affinities or GPU devices")
 
 # Add the options appropriate for benchmarking a set of problems
 multibench.insert_option_group(parser)
